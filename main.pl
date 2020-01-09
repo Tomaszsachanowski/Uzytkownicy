@@ -6,7 +6,7 @@ use String::Random;
 
 my $global_login;
 my $global_UID;
-my $global_GID="test_users_group";
+my $global_GID=1001;
 my $global_password;
 my $mw = MainWindow->new; # creat main window.
 $mw->geometry("600x400"); # set geometry.
@@ -44,6 +44,31 @@ sub get_available_uid {
 
 }
 
+sub check_login_and_uid {
+    my @list_user = ();# empty list
+    my ($user_name, $uid_name) = @_;# user_name = arrgument
+    my $command = "cut -d: -f1,3 /etc/passwd";
+        foreach my $process (`$command`) {
+            my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+            my $user = $spl[0];# if process doesn't belongs to root.
+            if (($user eq "$user_name")==1){
+                return my $tmp = "false user name";
+            }
+        }
+    if ($uid_name =~ /^[0-9,.E]+$/){
+        foreach my $process (`$command`) {
+            my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+            my $uid = $spl[1];# if process doesn't belongs to root.
+            if (($uid == "$uid_name")==1){
+                return my $tmp = "false uid";
+            }
+        }
+    }else {
+        return my $tmp = "uid is string";
+        }
+    
+}
+
 sub add_user {
 
 	my $mwlocal = MainWindow->new();# creat main window.
@@ -73,22 +98,39 @@ sub add_user {
 
 
     my $creat_button = $mwlocal -> Button(-text=>"Add", -command => sub{
+        
+        my $tmp = check_login_and_uid($entry_login->get(),$entry_uid->get());
 		if ( $entry_login->get() eq "" ){
 			$label_warning->configure(-text=>"Warning: Empty login!");
 			return;
 		}
-		if ( $entry_uid->get() eq "" ){
+		elsif ( $entry_uid->get() eq "" ){
 			$label_warning->configure(-text=>"Warning: Empty UID!");
 			return;
 		}
-		if ( $entry_password->get() eq "" ){
+		elsif ( $entry_password->get() eq "" ){
 			$label_warning->configure(-text=>"Warning: Empty PASSWORD!");
 			return;
 		}
-		if ( $entry_gid->get() eq "" ){
+		elsif ( $entry_gid->get() eq "" ){
 			$label_warning->configure(-text=>"Warning: Empty GID!");
 			return;
 		}
+		elsif ( $tmp ne "" ){
+			$label_warning->configure(-text=>"Warning: $tmp!");
+			return;
+		}
+        else{
+			$label_warning->configure(-text=>"Correct data!");
+            my $pass=crypt("$entry_password","salt");
+            $global_UID = $entry_uid->get();
+            $global_login = $entry_login->get();
+            $global_GID = $entry_gid->get();
+            $global_password = $entry_password->get();
+            print "$global_UID $global_login $global_GID $pass";
+		    #`useradd -u $global_UID -s $global_shell -m -p $pass $global_login`;
+
+        }
     }
     )->grid(-row=>7, -column=>0);
 
