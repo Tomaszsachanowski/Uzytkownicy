@@ -46,7 +46,7 @@ sub get_available_uid {
 
 sub add_user {
 	my $mwlocal = MainWindow->new();# creat main window.
-    $mwlocal->geometry("200x300"); # set geometry.
+    $mwlocal->geometry("300x300"); # set geometry.
     $mwlocal->title("Add User"); # set title.
 	my $label_login = $mwlocal->Label(-text=>"Login",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>2, -column=>0);
 	my $entry_login = $mwlocal->Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>2, -column=>1);
@@ -66,6 +66,11 @@ sub add_user {
 	my $entry_gid = $mwlocal-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>5, -column=>1);
 
     $entry_gid -> insert(0,$global_GID);
+
+    # label with warnings. 
+    my $label_warning = $mwlocal->Label(-text => "Warning:",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>1);
+
+    my $creat_button = $mwlocal -> Button(-text=>"Add")->grid(-row=>7, -column=>0);
 
 	MainLoop;
 }
