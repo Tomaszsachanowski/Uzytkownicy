@@ -134,13 +134,23 @@ sub add_user {
 		}
         else{
 			$label_warning->configure(-text=>"Correct data!");
-            my $pass=crypt("$entry_password","salt");
+
+            $global_password = $entry_password->get();
+            my $pass=crypt($global_password,"salt");
+            my $shell = "/bin/sh";
+
             $global_UID = $entry_uid->get();
             $global_login = $entry_login->get();
             $global_GID = $entry_gid->get();
-            $global_password = $entry_password->get();
-            print "$global_UID $global_login $global_GID $pass";
-		    #`useradd -u $global_UID -s $global_shell -m -p $pass $global_login`;
+            print "$global_UID $global_login $global_GID $global_password\n";
+		    `useradd -u $global_UID -s $shell -m -p $pass $global_login`;
+
+            $global_UID = get_available_uid()+1;
+            $entry_uid->delete(0,999);
+	        $entry_uid -> insert(0,$global_UID);
+            $global_password = generate_password();
+            $entry_password->delete(0,999);
+            $entry_password -> insert(0,$global_password);
 
         }
     }
