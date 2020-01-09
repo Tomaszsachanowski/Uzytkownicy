@@ -177,6 +177,11 @@ sub list_all_user{
 }
 
 sub remove_user {
+        my $user;
+        my $uid_name;
+        my $gid_name;
+        my $home_name;
+        my $shell_name;
     my $mwlocal = MainWindow->new();# creat main window.
     $mwlocal->geometry("400x300"); # set geometry.
     $mwlocal->title("Remove User"); # set title.
@@ -206,7 +211,7 @@ sub remove_user {
     # #Add array with users to Listbox.
     $listbox_all_user->insert("end",@all_users);
     # #add event if we click a item from Listbox we run change_user function.
-    sub change_user{
+    $listbox_all_user->bind('<Button-1>'=> sub {
         #get user name from Listbox. $_[0] is event from Listbox  
         my $user_name = $_[0]->get($_[0]->curselection);
         # joining string.
@@ -216,13 +221,12 @@ sub remove_user {
 
         foreach my $file (`cat /etc/passwd`) {
         my @spl = split(':',$file);# split line `root:x:0:0:root:/root:/bin/bash`
-        my $user = $spl[0];# frst element is user name.
-        my $uid_name = $spl[2];
-        my $gid_name = $spl[3];
-        my $home_name = $spl[-2];
-        my $shell_name = $spl[-1];
+        $user = $spl[0];# frst element is user name.
+        $uid_name = $spl[2];
+        $gid_name = $spl[3];
+        $home_name = $spl[-2];
+        $shell_name = $spl[-1];
         if ($user eq $user_name ){
-            print "$user $uid_name $gid_name $home_name $shell_name\n";
             $entry_login->delete(0,999);
 	        $entry_login -> insert(0,$user);
             $entry_uid->delete(0,999);
@@ -237,8 +241,7 @@ sub remove_user {
             }
         }
 
-    }
-    $listbox_all_user->bind('<Button-1>'=>\&change_user);
+    });
 
     my $delete_button = $right_frame -> Button(-text=>"Delete", -command => sub{
         my $tmp = $entry_login->get();
@@ -255,6 +258,31 @@ sub remove_user {
             # Update label with information about user name.
             $label_user_name->configure(-text=>"$text");
         })->grid(-row=>7, -column=>0);
+    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>7, -column=>1);
+    my $modif_button = $right_frame -> Button(-text=>"Modif_user", -command => sub { 
+
+        my $user_modif = $entry_login->get();
+        if($user_modif ne $user){
+            `usermod -l $user_modif $user`;
+        }
+        my $uid_modif = $entry_uid->get();
+        if($uid_modif ne $uid_name){
+            `usermod -u $uid_modif $user`;
+        }
+        my $gid_modif = $entry_gid->get();
+
+        @all_users = list_all_user();
+        $listbox_all_user->delete(0,999);
+        $listbox_all_user->insert("end",@all_users);
+        $entry_login->delete(0,999);
+        $entry_uid->delete(0,999);
+        $entry_dir->delete(0,999);
+        $entry_gid->delete(0,999);
+        $entry_shell->delete(0,999);
+        my $text = "User information:";
+        # Update label with information about user name.
+        $label_user_name->configure(-text=>"$text");
+    })->grid(-row=>8, -column=>0);
 
 	MainLoop;
 
