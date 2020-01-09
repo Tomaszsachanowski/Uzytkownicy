@@ -155,8 +155,109 @@ sub add_user {
         }
     }
     )->grid(-row=>7, -column=>0);
+    my $exit_button = $mwlocal -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>7, -column=>1);
 
 	MainLoop;
+}
+
+sub list_all_user{
+    # creat list of all users
+    # from file /etc/passwd and command `ps -e -o user`
+
+    my @list_users = ();# creat empty list
+    foreach my $file (`cut -d: -f1,3 /etc/passwd`) {
+    my @spl = split(':',$file);# split line `root:x:0:0:root:/root:/bin/bash`
+    my $user = $spl[0];# frst element is user name.
+    my $uid_name = $spl[1];
+    if ( ($uid_name > 100) && ($uid_name <= 60000) ){
+        push @list_users, $user;# add user to list
+        }
+    }
+    return @list_users;# return all list of users
+}
+
+sub remove_user {
+    my $mwlocal = MainWindow->new();# creat main window.
+    $mwlocal->geometry("400x300"); # set geometry.
+    $mwlocal->title("Remove User"); # set title.
+    my $left_frame = $mwlocal->Frame(-background => 'cyan')->pack(-side => "left"); # add main frame.
+    my $right_frame = $mwlocal->Frame(-background => 'cyan')->pack(-side => "right",); # add main frame.
+
+    # # list of users from file /etc/passwd.
+    my @all_users = list_all_user();
+    # #Add Listbox of all users.
+    my $listbox_all_user = $left_frame->Scrolled("Listbox", -scrollbars => "osoe")->pack();
+    my $label_user_name = $right_frame->Label(-text => "User information:")->grid(-row=>1, -column=>0);
+    # text widget where we see all process information for some user.                                                                                                                                                                           
+	my $label_login = $right_frame->Label(-text=>"Login",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>2, -column=>0);
+	my $entry_login = $right_frame->Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>2, -column=>1);
+	my $label_uid = $right_frame-> Label(-text=>"UID",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>3, -column=>0);
+	my $entry_uid = $right_frame-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>3, -column=>1);
+
+	my $label_dir = $right_frame-> Label(-text=>"home_dir",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>4, -column=>0);
+	my $entry_dir = $right_frame-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>4, -column=>1);
+
+	my $label_gid = $right_frame-> Label(-text=>"GID",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>5, -column=>0);
+	my $entry_gid = $right_frame-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>5, -column=>1);
+
+	my $label_shell = $right_frame-> Label(-text=>"shell",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>0);
+	my $entry_shell = $right_frame-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>1);
+
+    # #Add array with users to Listbox.
+    $listbox_all_user->insert("end",@all_users);
+    # #add event if we click a item from Listbox we run change_user function.
+    sub change_user{
+        #get user name from Listbox. $_[0] is event from Listbox  
+        my $user_name = $_[0]->get($_[0]->curselection);
+        # joining string.
+        my $text = "User information:" . $user_name;
+        # Update label with information about user name.
+        $label_user_name->configure(-text=>"$text");
+
+        foreach my $file (`cat /etc/passwd`) {
+        my @spl = split(':',$file);# split line `root:x:0:0:root:/root:/bin/bash`
+        my $user = $spl[0];# frst element is user name.
+        my $uid_name = $spl[2];
+        my $gid_name = $spl[3];
+        my $home_name = $spl[-2];
+        my $shell_name = $spl[-1];
+        if ($user eq $user_name ){
+            print "$user $uid_name $gid_name $home_name $shell_name\n";
+            $entry_login->delete(0,999);
+	        $entry_login -> insert(0,$user);
+            $entry_uid->delete(0,999);
+	        $entry_uid -> insert(0,$uid_name);
+
+            $entry_dir->delete(0,999);
+	        $entry_dir -> insert(0,$home_name);
+            $entry_gid->delete(0,999);
+	        $entry_gid -> insert(0,$gid_name);
+            $entry_shell->delete(0,999);
+	        $entry_shell -> insert(0,$shell_name);
+            }
+        }
+
+    }
+    $listbox_all_user->bind('<Button-1>'=>\&change_user);
+
+    my $delete_button = $right_frame -> Button(-text=>"Delete", -command => sub{
+        my $tmp = $entry_login->get();
+        `sudo userdel $tmp`;
+        @all_users = list_all_user();
+        $listbox_all_user->delete(0,999);
+        $listbox_all_user->insert("end",@all_users);
+            $entry_login->delete(0,999);
+            $entry_uid->delete(0,999);
+            $entry_dir->delete(0,999);
+            $entry_gid->delete(0,999);
+            $entry_shell->delete(0,999);
+            my $text = "User information:";
+            # Update label with information about user name.
+            $label_user_name->configure(-text=>"$text");
+        })->grid(-row=>7, -column=>0);
+
+	MainLoop;
+
 }
 
 MainLoop;
