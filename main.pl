@@ -44,9 +44,9 @@ sub get_available_uid {
 
 }
 
-sub check_login_and_uid {
+sub check_login_uid_gid {
     my @list_user = ();# empty list
-    my ($user_name, $uid_name) = @_;# user_name = arrgument
+    my ($user_name, $uid_name, $gid_name) = @_;# user_name = arrgument
     my $command = "cut -d: -f1,3 /etc/passwd";
         foreach my $process (`$command`) {
             my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
@@ -66,7 +66,14 @@ sub check_login_and_uid {
     }else {
         return my $tmp = "uid is string";
         }
-    
+
+    if ($gid_name =~ /^[0-9,.E]+$/){
+            if ( $gid_name <= 1000 || $gid_name >= 65534 ){
+                return my $tmp = "false gid";
+		    }
+        }else {
+            return my $tmp = "gid is string";
+        }
 }
 
 sub add_user {
@@ -99,7 +106,7 @@ sub add_user {
 
     my $creat_button = $mwlocal -> Button(-text=>"Add", -command => sub{
         
-        my $tmp = check_login_and_uid($entry_login->get(),$entry_uid->get());
+        my $tmp = check_login_uid_gid($entry_login->get(),$entry_uid->get(), $entry_gid->get());
 		if ( $entry_login->get() eq "" ){
 			$label_warning->configure(-text=>"Warning: Empty login!");
 			return;
