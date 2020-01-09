@@ -45,9 +45,7 @@ sub get_available_uid {
 }
 
 sub add_user {
-    sub check_and_save {
-        print "Etwas0";
-    }
+
 	my $mwlocal = MainWindow->new();# creat main window.
     $mwlocal->geometry("300x300"); # set geometry.
     $mwlocal->title("Add User"); # set title.
@@ -73,7 +71,26 @@ sub add_user {
     # label with warnings. 
     my $label_warning = $mwlocal->Label(-text => "Warning:",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>1);
 
-    my $creat_button = $mwlocal -> Button(-text=>"Add", -command => \&check_and_save)->grid(-row=>7, -column=>0);
+
+    my $creat_button = $mwlocal -> Button(-text=>"Add", -command => sub{
+		if ( $entry_login->get() eq "" ){
+			$label_warning->configure(-text=>"Warning: Empty login!");
+			return;
+		}
+		if ( $entry_uid->get() eq "" ){
+			$label_warning->configure(-text=>"Warning: Empty UID!");
+			return;
+		}
+		if ( $entry_password->get() eq "" ){
+			$label_warning->configure(-text=>"Warning: Empty PASSWORD!");
+			return;
+		}
+		if ( $entry_gid->get() eq "" ){
+			$label_warning->configure(-text=>"Warning: Empty GID!");
+			return;
+		}
+    }
+    )->grid(-row=>7, -column=>0);
 
 	MainLoop;
 }
