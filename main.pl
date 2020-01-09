@@ -36,7 +36,9 @@ sub get_available_uid {
         foreach my $users (`$command`) {
             my @spl = split(':',$users);# split line `root:0`
             my $uid = $spl[1];
-            push @list_user_uid, $uid;# add uid to list
+            if ( ($uid >= 1000) && ($uid <= 60000) ){
+                push @list_user_uid, $uid;# add uid to list
+            }
         }
     @list_user_uid = sort {$a <=> $b } @list_user_uid;
 
@@ -66,7 +68,10 @@ sub check_login_uid_gid {
     }else {
         return my $tmp = "uid is string";
         }
+    if ( ($uid_name <= 1000) || ($uid_name >= 60000) ){
+        return my $tmp = "false uid <1000";
 
+    }
     if ($gid_name =~ /^[0-9,.E]+$/){
             if ( $gid_name <= 1000 || $gid_name >= 65534 ){
                 return my $tmp = "false gid";
