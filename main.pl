@@ -11,6 +11,7 @@ my $global_password;
 my $global_shell = "/bin/sh";
 my $global_homedir = "/home/";
 my $global_command = "cat /etc/passwd";
+my $global_save_file = "/var/uzytkownicy";
 
 my $mw = MainWindow->new; # creat main window.
 $mw->geometry("600x400"); # set geometry.
@@ -177,6 +178,7 @@ sub add_user {
             print "$global_UID $global_login $global_GID $global_password\n";
 
 		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
+            `echo "$global_login:$global_UID:$global_password">>$global_save_file`;
 
             $global_UID = get_available_uid()+1;
             $entry_uid->delete(0,999);
