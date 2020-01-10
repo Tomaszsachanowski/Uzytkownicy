@@ -89,41 +89,28 @@ sub check_uid {
     }
 }
 
-sub check_login_uid_gid {
-    my @list_user = ();# empty list
-    my ($user_name, $uid_name, $gid_name) = @_;# user_name = arrgument
-    my $command = "cut -d: -f1,3 /etc/passwd";
-        foreach my $process (`$command`) {
-            my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-            my $user = $spl[0];# if process doesn't belongs to root.
-            if (($user eq "$user_name")==1){
-                return my $tmp = "false user name";
-            }
-        }
-    if ($uid_name =~ /^[0-9,.E]+$/){
-        foreach my $process (`$command`) {
-            my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-            my $uid = $spl[1];# if process doesn't belongs to root.
-            if (($uid == "$uid_name")==1){
-                return my $tmp = "false uid";
-            }
-        }
-    }else {
-        return my $tmp = "uid is string";
-        }
-    if ( ($uid_name <= 1000) || ($uid_name >= 60000) ){
-        return my $tmp = "false uid <1000";
+sub check_gid {
+        my ($gid, $login) = @_;# user_name = arrgument
 
-    }
-    if ($gid_name =~ /^[0-9,.E]+$/){
-            if ( $gid_name < 1000 || $gid_name >= 65534 ){
+    if ($gid =~ /^[0-9,.E]+$/){
+            if ( $gid < 1000 || $gid >= 65534 ){
                 return my $tmp = "false gid";
 		    }
         }else {
             return my $tmp = "gid is string";
         }
-    
+    foreach my $process (`cat /etc/group`) {
+                my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+                my $gid_tmp = $spl[2];# if process doesn't belongs to root.
+                if (($gid_tmp == "$gid")==1){
+                    return;
+                }
+    }
+    `groupadd -g $gid $login`;
+    return;
+                
 }
+
 
 sub add_user {
 
@@ -155,27 +142,28 @@ sub add_user {
 
     my $creat_button = $mwlocal -> Button(-text=>"Add", -command => sub{
         
-        my $tmp = check_login_uid_gid($entry_login->get(),$entry_uid->get(), $entry_gid->get());
-		if ( $entry_login->get() eq "" ){
-			$label_warning->configure(-text=>"Warning: Empty login!");
+
+        my $tmp = check_login($entry_login->get());
+        if ( $tmp ne ""){
+			$label_warning->configure(-text=>"Warning: $tmp!");
 			return;
-		}
-		elsif ( $entry_uid->get() eq "" ){
-			$label_warning->configure(-text=>"Warning: Empty UID!");
+        }
+        $tmp = check_uid($entry_uid->get());
+        if ( $tmp ne ""){
+			$label_warning->configure(-text=>"Warning: $tmp!");
 			return;
-		}
-		elsif ( $entry_password->get() eq "" ){
+        }
+
+		if ( $entry_password->get() eq "" ){
 			$label_warning->configure(-text=>"Warning: Empty PASSWORD!");
 			return;
 		}
-		elsif ( $entry_gid->get() eq "" ){
-			$label_warning->configure(-text=>"Warning: Empty GID!");
-			return;
-		}
-		elsif ( $tmp ne "" ){
+        $tmp = check_gid($entry_gid->get(), $entry_login->get());
+        if ( $tmp ne ""){
 			$label_warning->configure(-text=>"Warning: $tmp!");
 			return;
-		}
+        }
+
         else{
             my $tmp = "";
 			$label_warning->configure(-text=>"Correct data!");
@@ -188,20 +176,8 @@ sub add_user {
             $global_login = $entry_login->get();
             $global_GID = $entry_gid->get();
             print "$global_UID $global_login $global_GID $global_password\n";
-            foreach my $process (`cat /etc/group`) {
-                        my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-                        my $gid = $spl[2];# if process doesn't belongs to root.
-                        if (($gid == "$global_GID")==1){
-                            $tmp = "found gid";
-                        }
-                    }
-            if($tmp eq ""){
-            `groupadd -g $global_GID $global_login`;
-		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
-            }else{
-		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
 
-            }
+		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
 
             $global_UID = get_available_uid()+1;
             $entry_uid->delete(0,999);
@@ -213,6 +189,7 @@ sub add_user {
         }
     }
     )->grid(-row=>7, -column=>0);
+
     my $exit_button = $mwlocal -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>7, -column=>1);
 
 	MainLoop;
@@ -363,28 +340,28 @@ sub remove_user {
         }
         
         my $gid_modif = $entry_gid->get();
-        if($gid_modif ne $gid_name){
-		    if ( $gid_modif eq "" ){
-			    $label_warning->configure(-text=>"Warning: Empty UID!");
-			    return;
-		    }
-        if ($gid_modif =~ /^[0-9,.E]+$/){
-                if ( $gid_modif < 1000 || $gid_modif >= 65534 ){
-                    $label_warning->configure(-text=>"Warning: false gid!");
-                    return;
-                }
-            }else {
-                $label_warning->configure(-text=>"Warning: gid is string!");
-                return;
-            }
-            foreach my $process (`cat /etc/group`) {
-                        my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-                        my $gid = $spl[2];# if process doesn't belongs to root.
-                        if (($gid == "$gid_modif")==1){
-                            $tmp = "found gid";
-                        }
-                    }
-        }
+        # if($gid_modif ne $gid_name){
+		#     if ( $gid_modif eq "" ){
+		# 	    $label_warning->configure(-text=>"Warning: Empty UID!");
+		# 	    return;
+		#     }
+        # if ($gid_modif =~ /^[0-9,.E]+$/){
+        #         if ( $gid_modif < 1000 || $gid_modif >= 65534 ){
+        #             $label_warning->configure(-text=>"Warning: false gid!");
+        #             return;
+        #         }
+        #     }else {
+        #         $label_warning->configure(-text=>"Warning: gid is string!");
+        #         return;
+        #     }
+        #     foreach my $process (`cat /etc/group`) {
+        #                 my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+        #                 my $gid = $spl[2];# if process doesn't belongs to root.
+        #                 if (($gid == "$gid_modif")==1){
+        #                     $tmp = "found gid";
+        #                 }
+        #             }
+        # }
         @all_users = list_all_user();
         $listbox_all_user->delete(0,999);
         $listbox_all_user->insert("end",@all_users);
