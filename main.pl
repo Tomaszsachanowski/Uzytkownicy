@@ -244,75 +244,71 @@ sub remove_user {
 	my $entry_shell = $right_frame-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>1);
     my $label_warning = $right_frame->Label(-text => "Warning:",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>7, -column=>1);
 
+    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>8, -column=>1);
+
     # #Add array with users to Listbox.
     $listbox_all_user->insert("end",@all_users);
     # #add event if we click a item from Listbox we run change_user function.
     $listbox_all_user->bind('<Button-1>'=> sub {
-        #get user name from Listbox. $_[0] is event from Listbox  
-        my $user_name = $_[0]->get($_[0]->curselection);
-        # joining string.
-        my $text = "User information:" . $user_name;
-        # Update label with information about user name.
-        $label_user_name->configure(-text=>"$text");
+                            #get user name from Listbox. $_[0] is event from Listbox  
+                            my $user_name = $_[0]->get($_[0]->curselection);
+                            # joining string.
+                            my $text = "User information:" . $user_name;
+                            # Update label with information about user name.
+                            $label_user_name->configure(-text=>"$text");
 
-        foreach my $file (`cat /etc/passwd`) {
-        my @spl = split(':',$file);# split line `root:x:0:0:root:/root:/bin/bash`
-        $user = $spl[0];# frst element is user name.
-        $uid_name = $spl[2];
-        $gid_name = $spl[3];
-        $home_name = $spl[-2];
-        $shell_name = $spl[-1];
-        if ($user eq $user_name ){
-            $entry_login->delete(0,999);
-	        $entry_login -> insert(0,$user);
-            $entry_uid->delete(0,999);
-	        $entry_uid -> insert(0,$uid_name);
+                            foreach my $file (`$global_command`) {
+                            my @spl = split(':',$file);# split line `root:x:0:0:root:/root:/bin/bash`
+                            $user = $spl[0];# frst element is user name.
+                            $uid_name = $spl[2];
+                            $gid_name = $spl[3];
+                            $home_name = $spl[-2];
+                            $shell_name = $spl[-1];
+                            if ($user eq $user_name ){
+                                $entry_login->delete(0,999);
+                                $entry_login -> insert(0,$user);
+                                $entry_uid->delete(0,999);
+                                $entry_uid -> insert(0,$uid_name);
 
-            $entry_dir->delete(0,999);
-	        $entry_dir -> insert(0,$home_name);
-            $entry_gid->delete(0,999);
-	        $entry_gid -> insert(0,$gid_name);
-            $entry_shell->delete(0,999);
-	        $entry_shell -> insert(0,$shell_name);
-            }
-        }
+                                $entry_dir->delete(0,999);
+                                $entry_dir -> insert(0,$home_name);
+                                $entry_gid->delete(0,999);
+                                $entry_gid -> insert(0,$gid_name);
+                                $entry_shell->delete(0,999);
+                                $entry_shell -> insert(0,$shell_name);
+                                }
+                            }
 
-    });
+                        });
 
-    my $delete_button = $right_frame -> Button(-text=>"Delete", -command => sub{
-        my $tmp = $entry_login->get();
-        `sudo userdel $tmp`;
-        @all_users = list_all_user();
-        $listbox_all_user->delete(0,999);
-        $listbox_all_user->insert("end",@all_users);
-            $entry_login->delete(0,999);
-            $entry_uid->delete(0,999);
-            $entry_dir->delete(0,999);
-            $entry_gid->delete(0,999);
-            $entry_shell->delete(0,999);
-            my $text = "User information:";
-            # Update label with information about user name.
-            $label_user_name->configure(-text=>"$text");
+    my $delete_button = $right_frame -> Button(-text=>"Delete", -command => sub {
+                                    my $tmp = $entry_login->get();
+                                    `sudo userdel $tmp`;
+                                    @all_users = list_all_user();
+                                    $listbox_all_user->delete(0,999);
+                                    $listbox_all_user->insert("end",@all_users);
+                                        $entry_login->delete(0,999);
+                                        $entry_uid->delete(0,999);
+                                        $entry_dir->delete(0,999);
+                                        $entry_gid->delete(0,999);
+                                        $entry_shell->delete(0,999);
+                                        my $text = "User information:";
+                                        # Update label with information about user name.
+                                        $label_user_name->configure(-text=>"$text");
         })->grid(-row=>7, -column=>0);
-    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>8, -column=>1);
+    
     my $modif_button = $right_frame -> Button(-text=>"Modif_user", -command => sub {
 
         my $command = "cut -d: -f1,3 /etc/passwd";
 
         my $user_modif = $entry_login->get();
         if($user_modif ne $user){
-            if ( $user_modif eq "" ){
-			$label_warning->configure(-text=>"Warning: Empty login!");
-			return;
-		    }
-                my $command = "cut -d: -f1,3 /etc/passwd";
-                    foreach my $process (`$command`) {
-                        my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-                        my $user = $spl[0];# if process doesn't belongs to root.
-                        if (($user eq "$user_modif")==1){
-                            return;
-                        }
-                    }
+            my $tmp = check_login($user_modif);
+            if ( $tmp ne ""){
+                $label_warning->configure(-text=>"Warning: $tmp!");
+                return;
+            }
+
             `usermod -l $user_modif $user`;
         }
 
