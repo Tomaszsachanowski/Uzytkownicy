@@ -91,7 +91,6 @@ sub check_uid {
 
 sub check_gid {
         my ($gid, $login) = @_;# user_name = arrgument
-
     if ($gid =~ /^[0-9,.E]+$/){
             if ( $gid < 1000 || $gid >= 65534 ){
                 return my $tmp = "false gid";
@@ -103,11 +102,11 @@ sub check_gid {
                 my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
                 my $gid_tmp = $spl[2];# if process doesn't belongs to root.
                 if (($gid_tmp == "$gid")==1){
-                    return;
+                    return "";
                 }
     }
     `groupadd -g $gid $login`;
-    return;
+    return "";
                 
 }
 
@@ -314,50 +313,27 @@ sub remove_user {
 
         my $uid_modif = $entry_uid->get();
         if($uid_modif ne $uid_name){
-		    if ( $uid_modif eq "" ){
-			    $label_warning->configure(-text=>"Warning: Empty UID!");
-			    return;
-		    }
-            if ($uid_name =~ /^[0-9,.E]+$/){
-                foreach my $process (`$command`) {
-                    my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-                    my $uid = $spl[1];# if process doesn't belongs to root.
-                    if (($uid == "$uid_modif")==1){
-                        return;
-                    }
-                }
-            }else {
+            my $tmp = check_uid($uid_modif);
+            if ( $tmp ne ""){
+                $label_warning->configure(-text=>"Warning: $tmp!");
                 return;
-                }
-            if ( ($uid_name <= 1000) || ($uid_name >= 60000) ){
-                return;
-                }
-            `usermod -u $uid_modif $user`;
+            }
+
+            `usermod -u $uid_modif $user_modif`;
         }
         
         my $gid_modif = $entry_gid->get();
-        # if($gid_modif ne $gid_name){
-		#     if ( $gid_modif eq "" ){
-		# 	    $label_warning->configure(-text=>"Warning: Empty UID!");
-		# 	    return;
-		#     }
-        # if ($gid_modif =~ /^[0-9,.E]+$/){
-        #         if ( $gid_modif < 1000 || $gid_modif >= 65534 ){
-        #             $label_warning->configure(-text=>"Warning: false gid!");
-        #             return;
-        #         }
-        #     }else {
-        #         $label_warning->configure(-text=>"Warning: gid is string!");
-        #         return;
-        #     }
-        #     foreach my $process (`cat /etc/group`) {
-        #                 my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-        #                 my $gid = $spl[2];# if process doesn't belongs to root.
-        #                 if (($gid == "$gid_modif")==1){
-        #                     $tmp = "found gid";
-        #                 }
-        #             }
-        # }
+        if($gid_modif ne $gid_name){
+            my $tmp = check_gid($gid_modif, $user_modif);
+            print "tu jestem $tmp";
+            if ( $tmp ne ""){
+                $label_warning->configure(-text=>"Warning: $tmp!");
+                return;
+            }
+
+            `usermod -g $uid_modif $user_modif`;
+        }
+
         @all_users = list_all_user();
         $listbox_all_user->delete(0,999);
         $listbox_all_user->insert("end",@all_users);
