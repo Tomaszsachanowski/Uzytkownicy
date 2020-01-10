@@ -8,6 +8,9 @@ my $global_login;
 my $global_UID;
 my $global_GID=1001;
 my $global_password;
+my $global_shell = "/bin/sh";
+my $global_homedir = "/home/";
+
 my $mw = MainWindow->new; # creat main window.
 $mw->geometry("600x400"); # set geometry.
 $mw->title("Uzytkownicy"); # set title.
@@ -28,6 +31,7 @@ sub generate_password {
     return $pass->randpattern("C!nC!ncc!ccn");
 
 }
+
 sub get_available_uid {
         my @list_user_uid = ();# empty list
         my $command = "cut -d: -f1,3 /etc/passwd"; # commnad with all users.
@@ -73,7 +77,7 @@ sub check_login_uid_gid {
 
     }
     if ($gid_name =~ /^[0-9,.E]+$/){
-            if ( $gid_name <= 1000 || $gid_name >= 65534 ){
+            if ( $gid_name < 1000 || $gid_name >= 65534 ){
                 return my $tmp = "false gid";
 		    }
         }else {
@@ -133,6 +137,7 @@ sub add_user {
 			return;
 		}
         else{
+            my $tmp = "";
 			$label_warning->configure(-text=>"Correct data!");
 
             $global_password = $entry_password->get();
@@ -143,7 +148,20 @@ sub add_user {
             $global_login = $entry_login->get();
             $global_GID = $entry_gid->get();
             print "$global_UID $global_login $global_GID $global_password\n";
-		    `useradd -u $global_UID -s $shell -m -p $pass $global_login`;
+            foreach my $process (`cat /etc/group`) {
+                        my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+                        my $gid = $spl[2];# if process doesn't belongs to root.
+                        if (($gid == "$global_GID")==1){
+                            $tmp = "found gid";
+                        }
+                    }
+            if($tmp eq ""){
+            `groupadd -g $global_GID $global_login`;
+		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
+            }else{
+		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
+
+            }
 
             $global_UID = get_available_uid()+1;
             $entry_uid->delete(0,999);
