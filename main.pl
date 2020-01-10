@@ -10,6 +10,7 @@ my $global_GID=1001;
 my $global_password;
 my $global_shell = "/bin/sh";
 my $global_homedir = "/home/";
+my $global_command = "cat /etc/passwd";
 
 my $mw = MainWindow->new; # creat main window.
 $mw->geometry("600x400"); # set geometry.
@@ -50,6 +51,44 @@ sub get_available_uid {
 
 }
 
+sub check_login {
+    my ($login) = @_;# user_name = arrgument
+    		if ( "$login" eq "" ){
+                return my $tmp = "Empty login";
+		}else{
+            foreach my $process (`$global_command`) {
+                my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+                my $user = $spl[0];# if process doesn't belongs to root.
+                if (($user eq "$login")==1){
+                    return my $tmp = "login exist";
+                }
+            }
+        }
+}
+
+sub check_uid {
+        my ($uid) = @_;# user_name = arrgument
+
+    if ($uid =~ /^[0-9,.E]+$/){
+        foreach my $process (`$global_command`) {
+            my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+            my $uid_tmp = $spl[2];# if process doesn't belongs to root.
+            if (($uid_tmp == "$uid")==1){
+                return my $tmp = "uid exist";
+            }
+        }
+    }else {
+        return my $tmp = "uid is string";
+        }
+    if ( ($uid <= 1000) || ($uid >= 60000) ){
+        return my $tmp = "uid <1000, >60000";
+
+    }
+    elsif ( $uid eq "" ){
+        return my $tmp = "Empty uid";
+    }
+}
+
 sub check_login_uid_gid {
     my @list_user = ();# empty list
     my ($user_name, $uid_name, $gid_name) = @_;# user_name = arrgument
@@ -83,6 +122,7 @@ sub check_login_uid_gid {
         }else {
             return my $tmp = "gid is string";
         }
+    
 }
 
 sub add_user {
@@ -225,6 +265,7 @@ sub remove_user {
 
 	my $label_shell = $right_frame-> Label(-text=>"shell",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>0);
 	my $entry_shell = $right_frame-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>6, -column=>1);
+    my $label_warning = $right_frame->Label(-text => "Warning:",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>7, -column=>1);
 
     # #Add array with users to Listbox.
     $listbox_all_user->insert("end",@all_users);
@@ -276,19 +317,74 @@ sub remove_user {
             # Update label with information about user name.
             $label_user_name->configure(-text=>"$text");
         })->grid(-row=>7, -column=>0);
-    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>7, -column=>1);
-    my $modif_button = $right_frame -> Button(-text=>"Modif_user", -command => sub { 
+    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>8, -column=>1);
+    my $modif_button = $right_frame -> Button(-text=>"Modif_user", -command => sub {
+
+        my $command = "cut -d: -f1,3 /etc/passwd";
 
         my $user_modif = $entry_login->get();
         if($user_modif ne $user){
+            if ( $user_modif eq "" ){
+			$label_warning->configure(-text=>"Warning: Empty login!");
+			return;
+		    }
+                my $command = "cut -d: -f1,3 /etc/passwd";
+                    foreach my $process (`$command`) {
+                        my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+                        my $user = $spl[0];# if process doesn't belongs to root.
+                        if (($user eq "$user_modif")==1){
+                            return;
+                        }
+                    }
             `usermod -l $user_modif $user`;
         }
+
         my $uid_modif = $entry_uid->get();
         if($uid_modif ne $uid_name){
+		    if ( $uid_modif eq "" ){
+			    $label_warning->configure(-text=>"Warning: Empty UID!");
+			    return;
+		    }
+            if ($uid_name =~ /^[0-9,.E]+$/){
+                foreach my $process (`$command`) {
+                    my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+                    my $uid = $spl[1];# if process doesn't belongs to root.
+                    if (($uid == "$uid_modif")==1){
+                        return;
+                    }
+                }
+            }else {
+                return;
+                }
+            if ( ($uid_name <= 1000) || ($uid_name >= 60000) ){
+                return;
+                }
             `usermod -u $uid_modif $user`;
         }
+        
         my $gid_modif = $entry_gid->get();
-
+        if($gid_modif ne $gid_name){
+		    if ( $gid_modif eq "" ){
+			    $label_warning->configure(-text=>"Warning: Empty UID!");
+			    return;
+		    }
+        if ($gid_modif =~ /^[0-9,.E]+$/){
+                if ( $gid_modif < 1000 || $gid_modif >= 65534 ){
+                    $label_warning->configure(-text=>"Warning: false gid!");
+                    return;
+                }
+            }else {
+                $label_warning->configure(-text=>"Warning: gid is string!");
+                return;
+            }
+            foreach my $process (`cat /etc/group`) {
+                        my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
+                        my $gid = $spl[2];# if process doesn't belongs to root.
+                        if (($gid == "$gid_modif")==1){
+                            $tmp = "found gid";
+                        }
+                    }
+        }
         @all_users = list_all_user();
         $listbox_all_user->delete(0,999);
         $listbox_all_user->insert("end",@all_users);
