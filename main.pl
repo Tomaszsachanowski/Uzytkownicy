@@ -28,6 +28,9 @@ my $group_button = $menu->Menubutton(-text=>'Group', -background=>'white',-foreg
 $user_button -> command(-label=>'Add User', -command=>\&add_user);
 $user_button -> command(-label=>'Remove User', -command=>\&remove_user);
 
+#$group_button -> command(-label=>'Add groups', -command=>\&add_user);
+$group_button -> command(-label=>'Remove groups', -command=>\&remove_groups);
+
 sub generate_password {
     my $pass = String::Random->new;
     return $pass->randpattern("C!nC!ncc!ccn");
@@ -353,4 +356,40 @@ sub remove_user {
 
 }
 
+sub remove_groups {
+
+    my $mwlocal = MainWindow->new();# creat main window.
+    $mwlocal->geometry("400x300"); # set geometry.
+    $mwlocal->title("Remove User Groups"); # set title.
+    my $left_frame = $mwlocal->Frame(-background => 'cyan')->pack(-side => "left"); # add main frame.
+    my $right_frame = $mwlocal->Frame(-background => 'cyan')->pack(-side => "right",); # add main frame.
+    my $group_name;
+    # # list of users from file /etc/passwd.
+    my @all_users = list_all_user();
+    my @user_groups_list;
+    my $listbox_all_user = $left_frame->Scrolled("Listbox", -scrollbars => "osoe")->pack();
+    # #Add array with users to Listbox.
+    $listbox_all_user->insert("end",@all_users);
+    my $listbox_all_user_groups = $right_frame->Scrolled("Listbox", -scrollbars => "osoe")->pack();
+
+    # #add event if we click a item from Listbox we run change_user function.
+    $listbox_all_user->bind('<Button-1>'=> sub {
+            my $user_name = $_[0]->get($_[0]->curselection);
+            foreach my $group (`groups $user_name`) {
+                my @spl = split(' ',$group);# split line `root:x:0:0:root:/root:/bin/bash`
+                my $max_index = $#spl;
+                @user_groups_list = @spl[2..$max_index];
+                $listbox_all_user_groups->delete(0,999);
+                $listbox_all_user_groups->insert("end",@user_groups_list);
+
+
+            }
+        });
+    $listbox_all_user_groups->bind('<Button-1>'=> sub {
+            $group_name = $_[0]->get($_[0]->curselection);
+        });
+    
+    MainLoop;
+
+}
 MainLoop;
