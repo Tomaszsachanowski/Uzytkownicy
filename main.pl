@@ -224,7 +224,7 @@ sub list_all_groups{
     my @spl = split(':',$line);# split line `root:x:0:0:root:/root:/bin/bash`
     my $group = $spl[0];# frst element is user name.
     my $gid_name = $spl[1];
-    if ( ($gid_name > 100) && ($gid_name <= 60000) ){
+    if ( ($gid_name > 1000) && ($gid_name <= 60000) ){
         push @list_groups, $group;# add user to list
         }
     }
@@ -420,6 +420,7 @@ sub remove_groups {
             }
         }
     })->grid(-row=>2, -column=>0);
+    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>2, -column=>1);
 
     MainLoop;
 
@@ -435,13 +436,29 @@ sub add_groups {
     my $user_name = "";
     # # list of users from file /etc/passwd.
     my @all_users = list_all_user();
+    my @all_groups = list_all_groups();
     my @user_groups_list;
     my $listbox_all_user = $left_frame->Scrolled("Listbox", -scrollbars => "osoe")->pack();
     # #Add array with users to Listbox.
     $listbox_all_user->insert("end",@all_users);
     my $listbox_all_user_groups = $right_frame->Scrolled("Listbox", -scrollbars => "osoe")->grid(-row=>1, -column=>0);
-    
-    
+    $listbox_all_user_groups->insert("end",@all_groups);
+
+    $listbox_all_user->bind('<Button-1>'=> sub {
+            $user_name = $_[0]->get($_[0]->curselection);
+        });
+
+    $listbox_all_user_groups->bind('<Button-1>'=> sub {
+            $group_name = $_[0]->get($_[0]->curselection);
+        });
+
+    my $add_button = $right_frame -> Button(-text=>"Add to group", -command => sub {
+        if (($group_name ne "") && ($user_name ne "")){
+            `usermod -a -G $group_name $user_name`;
+            }
+    })->grid(-row=>2, -column=>0);
+    my $exit_button = $right_frame -> Button(-text=>"Exit", -command => sub { $mwlocal->DESTROY})->grid(-row=>2, -column=>1);
+
     MainLoop;
 
 }
