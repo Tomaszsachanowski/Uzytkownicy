@@ -2,59 +2,65 @@
 
 use Tk;
 use strict;
+# do generowania hasłą
 use String::Random;
-
+# poniżej zmienne przechowujące inoramcje 
 my $global_login;
 my $global_UID;
 my $global_GID=1001;
 my $global_password;
+# domyślne prametry przy tworzeniu użytkownika
 my $global_shell = "/bin/sh";
 my $global_homedir = "/home/";
 my $global_command = "cat /etc/passwd";
 my $global_save_file = "/var/uzytkownicy";
 
-my $mw = MainWindow->new; # creat main window.
-$mw->geometry("600x400"); # set geometry.
-$mw->title("Uzytkownicy"); # set title.
+my $mw = MainWindow->new; # stwórz główne okno.
+$mw->geometry("600x400"); # ustaw wymiary.
+$mw->title("Uzytkownicy"); # ustaw tytół.
 
-# create menu
+# stórz gółówne menu
 my $menu = $mw->Frame(-relief=> 'groove', -borderwidth=>3, -background=>'white') ->pack(-side=>'top',-fill=>'x');
 my $file_button = $menu->Menubutton(-text => "Exit", -background=>'white',-foreground=>'black',
                                     -menuitems => [ [ 'command' => "Exit","-command" => sub { exit }, "-underline" => 0 ] ]) -> pack(-side=>'left');
 my $user_button = $menu->Menubutton(-text=>'User', -background=>'white',-foreground=>'black') -> pack(-side=>'left');
 my $group_button = $menu->Menubutton(-text=>'Group', -background=>'white',-foreground=>'black') -> pack(-side=>'left');
 
-# create options in menu
+# opcje dla menu
 $user_button -> command(-label=>'Add User', -command=>\&add_user);
 $user_button -> command(-label=>'Remove User', -command=>\&remove_user);
 
 $group_button -> command(-label=>'Add groups', -command=>\&add_groups);
 $group_button -> command(-label=>'Remove groups', -command=>\&remove_groups);
 
+# funkcja generująca hasło C duza litera n cyfra ! znak
 sub generate_password {
     my $pass = String::Random->new;
     return $pass->randpattern("C!nC!ncc!ccn");
 
 }
 
+# funkcja do zwrócenia ostatniego zajetego uid
 sub get_available_uid {
-        my @list_user_uid = ();# empty list
-        my $command = "cut -d: -f1,3 /etc/passwd"; # commnad with all users.
+        my @list_user_uid = ();# pusta lista
+        my $command = "cut -d: -f1,3 /etc/passwd"; # polecenie do wyszukanai wszystkich użutkowników.
 
-        # for all users.
+        # pętla po użytkownikach.
         foreach my $users (`$command`) {
             my @spl = split(':',$users);# split line `root:0`
             my $uid = $spl[1];
+            # warunke i numer uid
             if ( ($uid >= 1000) && ($uid <= 60000) ){
                 push @list_user_uid, $uid;# add uid to list
             }
         }
+    # sortowanie listy uid
     @list_user_uid = sort {$a <=> $b } @list_user_uid;
-
+    # wybieram ostatni zajety uid potem dodam 1.
 	return $list_user_uid[-1];
 
 }
-
+# sprawdzenei loginu
 sub check_login {
     my ($login) = @_;# user_name = arrgument
     		if ( "$login" eq "" ){
@@ -62,39 +68,45 @@ sub check_login {
 		}else{
             foreach my $process (`$global_command`) {
                 my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-                my $user = $spl[0];# if process doesn't belongs to root.
+                my $user = $spl[0];
+                # czy wybrany login jest juz w passwd
                 if (($user eq "$login")==1){
                     return my $tmp = "login exist";
                 }
             }
         }
 }
-
+# funkcja do sprawdzenia uid
 sub check_uid {
-        my ($uid) = @_;# user_name = arrgument
-
+        my ($uid) = @_;# uid = arrgument
+    # czy jest numerem?
     if ($uid =~ /^[0-9,.E]+$/){
+        # czy juz taki istnieje w etc/passwd
         foreach my $process (`$global_command`) {
-            my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
-            my $uid_tmp = $spl[2];# if process doesn't belongs to root.
+            my @spl = split(':',$process);# split line `root:14353 `
+            my $uid_tmp = $spl[2];# czy login jest już zajety.
             if (($uid_tmp == "$uid")==1){
                 return my $tmp = "uid exist";
             }
         }
-    }else {
+    }else { # mamy dozynienia z stringiem
         return my $tmp = "uid is string";
         }
+    # czy numer nalezy do przedziału
     if ( ($uid <= 1000) || ($uid >= 60000) ){
         return my $tmp = "uid <1000, >60000";
 
     }
+    # czy nie jest pusty
     elsif ( $uid eq "" ){
         return my $tmp = "Empty uid";
     }
 }
 
+# Sprawdzami numer gid
 sub check_gid {
-        my ($gid, $login) = @_;# user_name = arrgument
+        my ($gid, $login) = @_;# gid = arrgument 1, login = agrument 2
+        # Czy to jest numer i czy nalezy do odpoiwedniego przedziału
     if ($gid =~ /^[0-9,.E]+$/){
             if ( $gid < 1000 || $gid >= 65534 ){
                 return my $tmp = "false gid";
@@ -102,6 +114,7 @@ sub check_gid {
         }else {
             return my $tmp = "gid is string";
         }
+    # czy mamy dostępny podnay gid
     foreach my $process (`cat /etc/group`) {
                 my @spl = split(':',$process);# split line `root     14353 kworker/u8:2`
                 my $gid_tmp = $spl[2];# if process doesn't belongs to root.
@@ -109,14 +122,16 @@ sub check_gid {
                     return "";
                 }
     }
+    # jak podany numer nie istniej tworze nowa grupe o nzwie podanego użytkowniak
     `groupadd -g $gid $login`;
     return "";
                 
 }
 
-
+# funkcja do dodnia użytkownika
 sub add_user {
 
+    # Tworze okna geometrie tytów oraz label tyczące sie danego parametru wraz z elementami tekstowymi obok.
 	my $mwlocal = MainWindow->new();# creat main window.
     $mwlocal->geometry("300x300"); # set geometry.
     $mwlocal->title("Add User"); # set title.
@@ -125,13 +140,13 @@ sub add_user {
 	my $label_uid = $mwlocal-> Label(-text=>"UID",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>3, -column=>0);
 	my $entry_uid = $mwlocal-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>3, -column=>1);
 
-	$global_UID = get_available_uid()+1;
+	$global_UID = get_available_uid()+1; # do ostaniego zajetego uid dodjae 1 i jest to pierwszy wolny numer
 	$entry_uid -> insert(0,$global_UID);
 
 	my $label_password = $mwlocal-> Label(-text=>"password",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>4, -column=>0);
 	my $entry_password = $mwlocal-> Entry(-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>4, -column=>1);
     
-    $global_password = generate_password();
+    $global_password = generate_password(); # dodaje wygenerowane hasło
     $entry_password -> insert(0,$global_password);
 
 	my $label_gid = $mwlocal-> Label(-text=>"GID",-background=>'white',-foreground=>'black',-relief => 'sunken')->grid(-row=>5, -column=>0);
@@ -144,8 +159,8 @@ sub add_user {
 
 
     my $creat_button = $mwlocal -> Button(-text=>"Add", -command => sub{
-        
-
+        # guzik button wraz z funkcja uruchamiajaća po wciśnieciu go
+        # jesli tmp nie jest pustym stringiem to mamy doczynienia z błedem któ©y wyświetlamy w Warning. 
         my $tmp = check_login($entry_login->get());
         if ( $tmp ne ""){
 			$label_warning->configure(-text=>"Warning: $tmp!");
@@ -166,13 +181,14 @@ sub add_user {
 			$label_warning->configure(-text=>"Warning: $tmp!");
 			return;
         }
-
+        # teraz gdy wszsytkie dane sa poprawne 
+        # pobieram dane z pól tekstowych  i umieszaczam je w poleceniu useradd
         else{
             my $tmp = "";
 			$label_warning->configure(-text=>"Correct data!");
 
             $global_password = $entry_password->get();
-            my $pass=crypt($global_password,"salt");
+            my $pass=crypt($global_password,"salt"); # towrzenei zaszfrowanego hasła wymóg przez polecenie useradd
             my $shell = "/bin/sh";
 
             $global_UID = $entry_uid->get();
@@ -181,8 +197,9 @@ sub add_user {
             print "$global_UID $global_login $global_GID $global_password\n";
 
 		    `useradd -u $global_UID -s $shell -m -p $pass -g $global_GID $global_login`;
+            #zapisuje informacje o dodnaym uzytkowniu do pliku /var/uzytkownicy
             `echo "$global_login:$global_UID:$global_password">>$global_save_file`;
-
+            # wprowadzam nowe dane do formulaza aby moc dodac kolejnego uzytkownika
             $global_UID = get_available_uid()+1;
             $entry_uid->delete(0,999);
 	        $entry_uid -> insert(0,$global_UID);
@@ -216,8 +233,8 @@ sub list_all_user{
 }
 
 sub list_all_groups{
-    # creat list of all users
-    # from file /etc/passwd and command `ps -e -o user`
+    # creat list of all groups
+    # from file /etc/group and command `ps -e -o user`
 
     my @list_groups = ();# creat empty list
     foreach my $line (`cut -d: -f1,3 /etc/group`) {
@@ -372,6 +389,7 @@ sub remove_user {
 
 }
 
+# funkcja do usuwania group
 sub remove_groups {
 
     my $mwlocal = MainWindow->new();# creat main window.
