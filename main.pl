@@ -28,7 +28,7 @@ my $group_button = $menu->Menubutton(-text=>'Group', -background=>'white',-foreg
 $user_button -> command(-label=>'Add User', -command=>\&add_user);
 $user_button -> command(-label=>'Remove User', -command=>\&remove_user);
 
-#$group_button -> command(-label=>'Add groups', -command=>\&add_user);
+$group_button -> command(-label=>'Add groups', -command=>\&add_groups);
 $group_button -> command(-label=>'Remove groups', -command=>\&remove_groups);
 
 sub generate_password {
@@ -213,6 +213,22 @@ sub list_all_user{
         }
     }
     return @list_users;# return all list of users
+}
+
+sub list_all_groups{
+    # creat list of all users
+    # from file /etc/passwd and command `ps -e -o user`
+
+    my @list_groups = ();# creat empty list
+    foreach my $line (`cut -d: -f1,3 /etc/group`) {
+    my @spl = split(':',$line);# split line `root:x:0:0:root:/root:/bin/bash`
+    my $group = $spl[0];# frst element is user name.
+    my $gid_name = $spl[1];
+    if ( ($gid_name > 100) && ($gid_name <= 60000) ){
+        push @list_groups, $group;# add user to list
+        }
+    }
+    return @list_groups;# return all list of users
 }
 
 sub remove_user {
@@ -405,6 +421,27 @@ sub remove_groups {
         }
     })->grid(-row=>2, -column=>0);
 
+    MainLoop;
+
+}
+
+sub add_groups {
+    my $mwlocal = MainWindow->new();# creat main window.
+    $mwlocal->geometry("400x300"); # set geometry.
+    $mwlocal->title("Remove User Groups"); # set title.
+    my $left_frame = $mwlocal->Frame(-background => 'cyan')->pack(-side => "left"); # add main frame.
+    my $right_frame = $mwlocal->Frame(-background => 'cyan')->pack(-side => "right",); # add main frame.
+    my $group_name = "";
+    my $user_name = "";
+    # # list of users from file /etc/passwd.
+    my @all_users = list_all_user();
+    my @user_groups_list;
+    my $listbox_all_user = $left_frame->Scrolled("Listbox", -scrollbars => "osoe")->pack();
+    # #Add array with users to Listbox.
+    $listbox_all_user->insert("end",@all_users);
+    my $listbox_all_user_groups = $right_frame->Scrolled("Listbox", -scrollbars => "osoe")->grid(-row=>1, -column=>0);
+    
+    
     MainLoop;
 
 }
